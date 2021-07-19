@@ -131,7 +131,7 @@
 <meta property="og:site_name" content="Spycsh">
 <meta property="og:description" content="Design Data-intensive applications (II) – 派生数据">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2021-07-16T22:06:27.235Z">
+<meta property="og:updated_time" content="2021-07-19T09:41:56.804Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="DDIA 数据密集型应用笔记 （III）">
 <meta name="twitter:description" content="Design Data-intensive applications (II) – 派生数据">
@@ -427,7 +427,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2021-07-17 00:06:27" itemprop="dateModified" datetime="2021-07-17T00:06:27+02:00">2021-07-17</time>
+                <time title="修改时间：2021-07-19 11:41:56" itemprop="dateModified" datetime="2021-07-19T11:41:56+02:00">2021-07-19</time>
               
             
           </span>
@@ -581,14 +581,70 @@
 <li>由于消息代理很快删除了消息，多数消息系统会假定当前工作集相当小，即队列很短。缓存不够用则会存到磁盘，吞吐量就会降低</li>
 <li>消息代理不支持任意的查询，但是当数据发生变化时（即新消息可用时），它们会通知客户端。</li>
 </ul>
-<h4 id="多个消费者"><a href="#多个消费者" class="headerlink" title="多个消费者"></a>多个消费者</h4><p><strong>负载均衡式</strong> 和 <strong>扇出fan-out式</strong>，前者每个消息有一个消费者消费即可，后者每个消息都传递给所有消费者。</p>
+<h4 id="多个消费者"><a href="#多个消费者" class="headerlink" title="多个消费者"></a>多个消费者</h4><ul>
+<li>AMQP/JMS风格的消息代理, 相关标准：STOMP, MQTT。举例：RabbitMQ。无日志，生产者和消费者直连，消费后就删除</li>
+</ul>
+<p><strong>负载均衡式</strong> 和 <strong>扇出fan-out式</strong>，前者每个消息有一个消费者消费即可，后者每个消息都传递给所有消费者。</p>
 <p>前者可能会出问题：消费者（客户端）关闭超时，代理没有收到ack，就需要重新传递给另一个消费者，这样可能就不会按照生产者发送的顺序处理消息了。如果消息有因果关系就比较棘手。<br>还要注意：消息可能完全处理，但是ack丢失，这时候可能要原子提交协议，譬如2PC。</p>
-<h4 id="分区日志"><a href="#分区日志" class="headerlink" title="分区日志"></a>分区日志</h4><ul>
+<h4 id="分区日志"><a href="#分区日志" class="headerlink" title="分区日志"></a>分区日志</h4><p>append-only</p>
+<ul>
 <li>基于日志的消息存储（Kafka，Amazon Kinesis， Twitter Distributed Log）</li>
 </ul>
 <p>生产者通过将消息追加到日志的末尾来发送消息，消费者通过依次读取日志来接收消息。如果消费者读到日志的末尾，它就开始等待新消息被追加的通知。</p>
 <p>生产者通过将消息追加到基于<strong>主题-分区</strong>的文件，消费者依次读取这些文件。尽管这些消息代理将所有消息写入磁盘，但通过多台机器的<strong>分区</strong>，支持百万条消息的吞吐量，并且通过<strong>复制消息</strong>实现了容错性。</p>
 <p>Kafka 如何保证消息的消费顺序？详见<a href="https://zhuanlan.zhihu.com/p/262156222" target="_blank" rel="noopener">链接</a></p>
+<ul>
+<li><p>消费者顺序读取一个分区，需要一个偏移量</p>
+</li>
+<li><p>磁盘空间使用中需要回收，日志会被分为段，不断的归档或删除。mq很短时，很快。当写入磁盘时吞吐量会降低。</p>
+</li>
+<li><p>消费者跟不上生产者时，会写到mq里，积压很多会写到磁盘里，再不济就会丢弃过旧的信息（环形缓冲区)，但这些不会影响其它的消费者。</p>
+</li>
+</ul>
+<h3 id="数据库与流"><a href="#数据库与流" class="headerlink" title="数据库与流"></a>数据库与流</h3><p>大多数重要的应用程序都需要结合多种不同的技术来满足需求：例如，使<br>用OLTP数据库来为用户请求提供服务， 使用缓存来加速常见请求， 使用全文索引处理搜索查询， 以及使用数据仓库用于分析。</p>
+<p>如果数据库某个项更新，也需要在缓存、搜索索引和数据仓库中更新。这时就可以在数据更改时显式地写入每个系统，称之为<strong>双重写入</strong>。这时就会出现race condition（书中图11-4，客户端1 set X=A，客户端2 set X=B，都是先更新数据库再更新搜索索引，但是可能出现数据库与索引不一致的情况）。</p>
+<p>这个问题书上是以版本向量作为解决方案，但是我个人对此表示怀疑，因为即使知道数据库上的happens-before关系，搜索索引也不知道，版本向量又有什么用呢？我觉得缓存本身就是查不到（目标没命中）就去回查数据库，那么就是以数据库为主的。所以可以数据库更新时就直接删了缓存，而不是写入缓存。到时候要新值的时候,缓存既然是空，就从数据库加载新值就行了。</p>
+<h4 id="变更数据捕获-CDC"><a href="#变更数据捕获-CDC" class="headerlink" title="变更数据捕获(CDC)"></a>变更数据捕获(CDC)</h4><p>当然，另一种可能性就是change data capture，也就是用数据库触发器来检测数据库变更，变更的数据日志（只追加）会被发到搜索索引和数仓里，类似的比如用PostgreSQL的预写日志，MySQL的binlog等。这样的操作因为是异步的，所以用户依然可能会在写到搜索和数仓前查到旧数据，也就是遇到复制滞后问题。</p>
+<ul>
+<li>初始快照</li>
+</ul>
+<p>日志通常需要被阶段，因为太耗空间了。因此有了快照。全文索引需要整个数据库的完整副本，所以仅仅应用最近更改的日志不够，需要从一致的快照开始应用。</p>
+<ul>
+<li>日志压缩</li>
+</ul>
+<p>正如书第3章“哈希索引”的日志结果存储引擎，存储引擎定期查找具有相同key的日志记录，丢弃所有的重复项，并且只保留每个key的最新的更新。这个压缩和合并的过程是在后台运行的。Apache Kafka支持此日志压缩功能。</p>
+<h4 id="流处理的目标场景"><a href="#流处理的目标场景" class="headerlink" title="流处理的目标场景"></a>流处理的目标场景</h4><ul>
+<li>基于事件模型的查询（复杂事件处理）</li>
+<li>计算窗口聚合（流分析）</li>
+<li>保持派生数据系统处于最新状态（物化视图）</li>
+</ul>
+<h4 id="流join"><a href="#流join" class="headerlink" title="流join"></a>流join</h4><ul>
+<li>流和流join</li>
+</ul>
+<p>两个输入流都由活动事件组成，采用join操作来搜索在特定时间窗口内发生的相关事件。例如，匹配相同用户在30min内采取的两个动作。两个join可以是相同的流。</p>
+<ul>
+<li>流和表join</li>
+</ul>
+<p>一个事件输入流，另一个是数据库变更日志。join来输出一个包含更多信息的事件。</p>
+<ul>
+<li>表和表join</li>
+</ul>
+<p>两个都是数据库更新日志。对两个表之间的join的物化视图进行持续的更新。</p>
+<h4 id="容错"><a href="#容错" class="headerlink" title="容错"></a>容错</h4><ul>
+<li><p>批处理中，恰好一次exactly once可以由重新启动任务并丢弃失败的副本输出实现。但由于流是无限的，几乎无法做到。</p>
+</li>
+<li><p>Apache Flink定期生成状态滚动检查点并写入持久化存储。</p>
+</li>
+<li><p>幂等（idempotent）</p>
+</li>
+</ul>
+<p>多次执行输出一样。kafka的offset避免了这个问题防止重复执行相同的更新。</p>
+<h4 id="流式处理与服务"><a href="#流式处理与服务" class="headerlink" title="流式处理与服务"></a>流式处理与服务</h4><p>当前流行的应用程序开发风格是将功能分解为一组通过同步网络请求（REST,RPC)进行通信的服务。优点是松耦合，让不同的团队可以在不同服务上工作。将stream operator组合成数据流系统与微服务理念有许多相似的特征。但是通信机制是单向、异步的消息流而非同步的请求/响应交互。</p>
+<p>数据流能具有更好的容错，也可以有更好的性能，比如买东西需要知道汇率，用微服务RPC的方法就要从远程数据库查汇率服务，用数据流方法就可以订阅汇率更新流，在当地数据库发生更改时记录当前的汇率，有购汇请求就只需查询本地数据库即可。也就是购汇请求和汇率更新事件有一个流与表的join。</p>
+<blockquote>
+<p>结语</p>
+</blockquote>
+<p>暑假花了一个月，终于把这本书大概看了一遍了，每一章看的时候都能和以前的课程或项目联系起来，也扩充了自己的知识面。正如作者最后所说，数据是把双刃剑，它能给生活带来便捷，也能危及人们的隐私。从学校课堂监视孩子表情来检测积极性，到外卖软件对骑手送餐的监管与时间的严格限制，再到Deepfake，再到各大视频流网站的推荐技术。大数据似乎像一个囚笼，把人的自由和隐私作为一种积累资本的工具。我不否认大数据带来的便捷，但是它绝不应当无视道德边界与人文关怀。</p>
 
       
     </div>
@@ -858,7 +914,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Design-Data-intensive-applications-II-–-派生数据"><span class="nav-number">1.</span> <span class="nav-text">Design Data-intensive applications (II) – 派生数据</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#批处理系统"><span class="nav-number">1.1.</span> <span class="nav-text">批处理系统</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#UNIX"><span class="nav-number">1.1.1.</span> <span class="nav-text">UNIX</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MapReduce与分布式文件系统"><span class="nav-number">1.1.2.</span> <span class="nav-text">MapReduce与分布式文件系统</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#MapReduce作业执行"><span class="nav-number">1.1.2.1.</span> <span class="nav-text">MapReduce作业执行</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Reduce端的join与分组"><span class="nav-number">1.1.2.2.</span> <span class="nav-text">Reduce端的join与分组</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#处理数据倾斜"><span class="nav-number">1.1.2.3.</span> <span class="nav-text">处理数据倾斜</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#map端join"><span class="nav-number">1.1.2.4.</span> <span class="nav-text">map端join</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#MapReduce的弊端"><span class="nav-number">1.1.2.5.</span> <span class="nav-text">MapReduce的弊端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#数据流引擎"><span class="nav-number">1.1.2.6.</span> <span class="nav-text">数据流引擎</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#流处理系统"><span class="nav-number">1.2.</span> <span class="nav-text">流处理系统</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#消息系统"><span class="nav-number">1.2.1.</span> <span class="nav-text">消息系统</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据库-vs-消息队列"><span class="nav-number">1.2.1.1.</span> <span class="nav-text">数据库 vs. 消息队列</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#多个消费者"><span class="nav-number">1.2.1.2.</span> <span class="nav-text">多个消费者</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#分区日志"><span class="nav-number">1.2.1.3.</span> <span class="nav-text">分区日志</span></a></li></ol></li></ol></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Design-Data-intensive-applications-II-–-派生数据"><span class="nav-number">1.</span> <span class="nav-text">Design Data-intensive applications (II) – 派生数据</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#批处理系统"><span class="nav-number">1.1.</span> <span class="nav-text">批处理系统</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#UNIX"><span class="nav-number">1.1.1.</span> <span class="nav-text">UNIX</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MapReduce与分布式文件系统"><span class="nav-number">1.1.2.</span> <span class="nav-text">MapReduce与分布式文件系统</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#MapReduce作业执行"><span class="nav-number">1.1.2.1.</span> <span class="nav-text">MapReduce作业执行</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Reduce端的join与分组"><span class="nav-number">1.1.2.2.</span> <span class="nav-text">Reduce端的join与分组</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#处理数据倾斜"><span class="nav-number">1.1.2.3.</span> <span class="nav-text">处理数据倾斜</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#map端join"><span class="nav-number">1.1.2.4.</span> <span class="nav-text">map端join</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#MapReduce的弊端"><span class="nav-number">1.1.2.5.</span> <span class="nav-text">MapReduce的弊端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#数据流引擎"><span class="nav-number">1.1.2.6.</span> <span class="nav-text">数据流引擎</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#流处理系统"><span class="nav-number">1.2.</span> <span class="nav-text">流处理系统</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#消息系统"><span class="nav-number">1.2.1.</span> <span class="nav-text">消息系统</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据库-vs-消息队列"><span class="nav-number">1.2.1.1.</span> <span class="nav-text">数据库 vs. 消息队列</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#多个消费者"><span class="nav-number">1.2.1.2.</span> <span class="nav-text">多个消费者</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#分区日志"><span class="nav-number">1.2.1.3.</span> <span class="nav-text">分区日志</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据库与流"><span class="nav-number">1.2.2.</span> <span class="nav-text">数据库与流</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#变更数据捕获-CDC"><span class="nav-number">1.2.2.1.</span> <span class="nav-text">变更数据捕获(CDC)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#流处理的目标场景"><span class="nav-number">1.2.2.2.</span> <span class="nav-text">流处理的目标场景</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#流join"><span class="nav-number">1.2.2.3.</span> <span class="nav-text">流join</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#容错"><span class="nav-number">1.2.2.4.</span> <span class="nav-text">容错</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#流式处理与服务"><span class="nav-number">1.2.2.5.</span> <span class="nav-text">流式处理与服务</span></a></li></ol></li></ol></li></ol></li></ol></div>
             
 
           </div>
