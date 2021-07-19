@@ -123,18 +123,18 @@
 
 
 
-  <meta name="description" content="公司里的unix工作环境都部署在citrix云上，并且都没有接入互联网。想要给同事共享一个文件就很麻烦，需要复制黏贴代码到本地windows上再邮件发过去。 无意间想到一个sftp（secure file transport protocol），大家都知道ftp是不加密的传输，而sftp可以通过ssh建立一个可靠的链路进行文件传输，就尝试用了用，发现确实可以在远程unix工作环境启动sftp然后直">
+  <meta name="description" content="使用sftp在不同云主机间传递文件">
 <meta name="keywords" content="tools">
 <meta property="og:type" content="article">
 <meta property="og:title" content="使用sftp在不同云主机间传递文件">
 <meta property="og:url" content="https://spycsh.github.io/blog/2021/07/15/使用sftp在不同云主机间传递文件/index.html">
 <meta property="og:site_name" content="Spycsh">
-<meta property="og:description" content="公司里的unix工作环境都部署在citrix云上，并且都没有接入互联网。想要给同事共享一个文件就很麻烦，需要复制黏贴代码到本地windows上再邮件发过去。 无意间想到一个sftp（secure file transport protocol），大家都知道ftp是不加密的传输，而sftp可以通过ssh建立一个可靠的链路进行文件传输，就尝试用了用，发现确实可以在远程unix工作环境启动sftp然后直">
+<meta property="og:description" content="使用sftp在不同云主机间传递文件">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2021-07-15T15:17:39.958Z">
+<meta property="og:updated_time" content="2021-07-19T09:44:22.845Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="使用sftp在不同云主机间传递文件">
-<meta name="twitter:description" content="公司里的unix工作环境都部署在citrix云上，并且都没有接入互联网。想要给同事共享一个文件就很麻烦，需要复制黏贴代码到本地windows上再邮件发过去。 无意间想到一个sftp（secure file transport protocol），大家都知道ftp是不加密的传输，而sftp可以通过ssh建立一个可靠的链路进行文件传输，就尝试用了用，发现确实可以在远程unix工作环境启动sftp然后直">
+<meta name="twitter:description" content="使用sftp在不同云主机间传递文件">
 
 
 
@@ -410,12 +410,24 @@
                 
               
 
-              <time title="创建时间：2021-07-15 13:04:54 / 修改时间：17:17:39" itemprop="dateCreated datePublished" datetime="2021-07-15T13:04:54+02:00">2021-07-15</time>
+              <time title="创建时间：2021-07-15 13:04:54" itemprop="dateCreated datePublished" datetime="2021-07-15T13:04:54+02:00">2021-07-15</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2021-07-19 11:44:22" itemprop="dateModified" datetime="2021-07-19T11:44:22+02:00">2021-07-19</time>
               
             
           </span>
@@ -448,7 +460,8 @@
       
 
       
-        <p>公司里的unix工作环境都部署在citrix云上，并且都没有接入互联网。想要给同事共享一个文件就很麻烦，需要复制黏贴代码到本地windows上再邮件发过去。</p>
+        <h1 id="使用sftp在不同云主机间传递文件"><a href="#使用sftp在不同云主机间传递文件" class="headerlink" title="使用sftp在不同云主机间传递文件"></a>使用sftp在不同云主机间传递文件</h1><a id="more"></a>
+<p>公司里的unix工作环境都部署在citrix云上，并且都没有接入互联网。想要给同事共享一个文件就很麻烦，需要复制黏贴代码到本地windows上再邮件发过去。</p>
 <p>无意间想到一个sftp（secure file transport protocol），大家都知道ftp是不加密的传输，而sftp可以通过ssh建立一个可靠的链路进行文件传输，就尝试用了用，发现确实可以在远程unix工作环境启动sftp然后直接共享文件给同事的unix工作环境。</p>
 <p>unix shell命令如下</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">sftp username@192.168.xx.xx <span class="comment"># 打开sftp服务</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 输入远程用户的windows密码</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 一些操作，如果本地用命令就加一个l前缀就行了</span></span><br><span class="line">sftp&gt; lcd Desktop   <span class="comment"># cd到本地Desktop目录（local cd）</span></span><br><span class="line">sftp&gt; <span class="built_in">cd</span> Desktop    <span class="comment"># 远程cd到Desktop目录</span></span><br><span class="line">sftp&gt; ls Desktop    <span class="comment"># 查看远程桌面目录下的文件</span></span><br><span class="line">sftp&gt; lls Desktop   <span class="comment"># 查看本地桌面目录下的文件</span></span><br><span class="line">sftp&gt; <span class="built_in">pwd</span>           <span class="comment"># 查看远程工作目录</span></span><br><span class="line">sftp&gt; lpwd          <span class="comment"># 查看本地工作目录</span></span><br><span class="line">sftp&gt; get example.txt <span class="comment"># 下载文件</span></span><br><span class="line">sftp&gt; put example.txt <span class="comment"># 上传文件</span></span><br><span class="line">sftp&gt; mkdir new_dir</span><br><span class="line">sftp&gt; rmdir new_dir</span><br><span class="line"></span><br><span class="line">sftp&gt; <span class="built_in">exit</span> <span class="comment"># 退出</span></span><br></pre></td></tr></table></figure>
@@ -565,8 +578,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <div class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <div class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
             
@@ -699,6 +721,22 @@
         </div>
       </div>
 
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#使用sftp在不同云主机间传递文件"><span class="nav-number">1.</span> <span class="nav-text">使用sftp在不同云主机间传递文件</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
       
 
       
