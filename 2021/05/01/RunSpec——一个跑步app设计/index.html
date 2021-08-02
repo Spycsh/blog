@@ -131,7 +131,7 @@
 <meta property="og:site_name" content="Spycsh">
 <meta property="og:description" content="RunSpec——一个基于Kotlin前端，Kafka+Spark+MongoDB后台的跑步app设计">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2021-07-13T20:02:41.996Z">
+<meta property="og:updated_time" content="2021-08-02T15:14:08.020Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RunSpec——一个跑步app设计">
 <meta name="twitter:description" content="RunSpec——一个基于Kotlin前端，Kafka+Spark+MongoDB后台的跑步app设计">
@@ -427,7 +427,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2021-07-13 22:02:41" itemprop="dateModified" datetime="2021-07-13T22:02:41+02:00">2021-07-13</time>
+                <time title="修改时间：2021-08-02 17:14:08" itemprop="dateModified" datetime="2021-08-02T17:14:08+02:00">2021-08-02</time>
               
             
           </span>
@@ -468,6 +468,17 @@
 <h2 id="producer-接收app数据并且转交给Kafka队列的模块"><a href="#producer-接收app数据并且转交给Kafka队列的模块" class="headerlink" title="producer - 接收app数据并且转交给Kafka队列的模块"></a>producer - 接收app数据并且转交给Kafka队列的模块</h2><p>由于目标是庞大的用户群体产生的实时跑步数据，因此使用Kafka来作解耦与缓冲的中间件。前端采集到数据后，发布这些数据给producer模块的Kafka broker再由processor模块消费。同时producer模块利用reslet建立了一些REST API来返回该用户历史跑过的POI，Top5的POI，和用户当前跑过的POI。</p>
 <h2 id="processor-用Spark对实时数据进行分析并存储的模块"><a href="#processor-用Spark对实时数据进行分析并存储的模块" class="headerlink" title="processor - 用Spark对实时数据进行分析并存储的模块"></a>processor - 用Spark对实时数据进行分析并存储的模块</h2><p>订阅了Kafka broker的processor模块将对用户实时的跑步数据进行一个分析和存储。这里使用Spark来进行分布式处理较为妥当。首先Spark对mongoDB有原生操作的的<a href="https://docs.mongodb.com/spark-connector/v1.1/java-api/" target="_blank" rel="noopener">connector</a>，处理起来较为便捷。此处由于缺乏对相关例子的研究，并没有用到这个connector。而是简单地用insertOne逐条存储到MongoDB的runnerData表中。当然，对于预设的POI进行了<a href="https://spark.apache.org/docs/1.6.1/api/java/org/apache/spark/broadcast/Broadcast.html" target="_blank" rel="noopener">广播</a>，用以在不同的executor上处理数据流时可以由多个task共享一个POI，进行更快速的计算。同时，计算POI和用户经纬度的距离，若小于阈值，再判断是否已有同一用户id，同一tripId经过该点的记录，否则该POI热度加一。将这个count存入数据库表runnerPOIData中。</p>
 <h2 id="statisticsboard-POI跑步数据显示面板"><a href="#statisticsboard-POI跑步数据显示面板" class="headerlink" title="statisticsboard - POI跑步数据显示面板"></a>statisticsboard - POI跑步数据显示面板</h2><p>主要是一个springboot项目。它可以在<code>localhost:8081</code>可视化POI的热度，也可以检测经过POI的用户的记录表。数据每5秒通过stomp websocket推送到面版，再由leaflet.js在页面左边进行渲染可视化。页面右侧是一个表格，记录了trip Id，跑者Id，POI Id，距离与时间。</p>
+<blockquote>
+<p><a href="https://github.com/Spycsh/RunSpec" target="_blank" rel="noopener">RunSpec</a>项目如何在kafka<strong>集群</strong>中，确保顺序收到跑步数据runnerData？</p>
+</blockquote>
+<p>最简单的方法，一个partition对应一个topic，所有属于这个topic的数据发到同一个partition里。</p>
+<p>另一种方法，key(也就是userId)先hash再对集群partition数取余，相同结果的分配到同一个partition，虽然消费者随机读一个partition，但是能保证相同userId的跑步记录不会出现记录顺序错误的问题，这样一来，虽然我们依然不能保证linearizable的收到所有跑者的跑步记录，但是我们可以保证同一个跑者不会出现数据顺序错误。倘若有3个server，也就是三个broker，对应的topic runnerData有三个topic。</p>
+<p>但这样一旦节点数增加，key取余对应的partition就不一样了，原来有3个分区，现在有4个，数据就存放到不同的partition了，就会出错，一种方法是只改变分区与节点的对应关系，不改变分区与key的映射。</p>
+<blockquote>
+<p><a href="https://github.com/Spycsh/RunSpec" target="_blank" rel="noopener">RunSpec</a>项目如何处理跑步路径海量数据点的压缩？</p>
+</blockquote>
+<p>由于考虑到存储与实时处理的压力，一般需要某种抽稀算法来压缩路径，也就是只存储一些路径上的关键点（比如折线的拐点等）而不用存储路径上的所有点。常见的一种方法是Douglas–Peucker算法，一种方法是垂直限距法。这个项目使用了垂直限距法作为基础，并且进行了一些改动，使其能实时地压缩数据点。我们首先规定一个threshold，并建立一个thinnedList，thinnedList存放的正是所有压缩后留下的点，即所有关键点，利用这些关键点就能大致地画出轨迹，而不至于带来大的存储压力，还要建立一个window，数据点流都会写到window里，可以当它是一个临时的list，每次都用来处理点到直线距离从而判断一个点是否是关键点。算法简述如下：把第一个点（开始点）放入thinnedList，后面的点不断加入window list，直到window大小等于2时，取thinnedList的最后一个点A，window的两个点B、C，计算B到A、C的直线距离，若大于threshold，则B是一个关键点，放入thinnedList，或直接存入mongo，反之，则点B近似在A、C组成的一条直线上，丢弃不作处理。后面的点不断加入window list，每当window size等于2时就可以判断一个点的去留，因此除了最后一个点，我们将获取中间所有的点的压缩路径。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">dilutingRealTime</span><span class="params">(RunnerData runnerData)</span></span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(thinnedList.size()==<span class="number">0</span>) &#123;</span><br><span class="line">            thinnedList.add(runnerData);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(window.size() &lt; <span class="number">2</span>)&#123;</span><br><span class="line">            window.add(runnerData);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span>(window.size() == <span class="number">2</span>)&#123;</span><br><span class="line">            <span class="keyword">double</span> distance = pointToLineDistance(</span><br><span class="line">                    Double.parseDouble(window.get(<span class="number">0</span>).getLatitude()),</span><br><span class="line">                    Double.parseDouble(window.get(<span class="number">0</span>).getLongitude()),</span><br><span class="line">                    Double.parseDouble(thinnedList.get(thinnedList.size()-<span class="number">1</span>).getLatitude()),</span><br><span class="line">                    Double.parseDouble(thinnedList.get(thinnedList.size()-<span class="number">1</span>).getLongitude()),</span><br><span class="line">                    Double.parseDouble(window.get(<span class="number">1</span>).getLatitude()),</span><br><span class="line">                    Double.parseDouble(window.get(<span class="number">1</span>).getLongitude())</span><br><span class="line">            );</span><br><span class="line">            <span class="keyword">if</span> (distance &gt; <span class="keyword">this</span>.threshold) &#123;</span><br><span class="line">                thinnedList.add(window.get(<span class="number">0</span>));</span><br><span class="line">            &#125;</span><br><span class="line">            window.removeFirst();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
 
       
     </div>
@@ -605,7 +616,7 @@
                 
                   <a href="/blog/archives">
                 
-                    <span class="site-state-item-count">33</span>
+                    <span class="site-state-item-count">34</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
