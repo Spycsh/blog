@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[Emacs常用命令]]></title>
+    <url>%2Fblog%2F2021%2F08%2F03%2FEmacs%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4%2F</url>
+    <content type="text"><![CDATA[Emacs常用的有用的命令汇总 启动/打开/新建文件: emacs example.erl C-x表示按住CTRL键，然后按x M-x表示先按住Alt键，然后按x 取消执行 C-g，按错键或中断emacs命令可以按C-g 翻页 C-v 上一页 M-v (view next screen) 移到行头 C-a，行尾 C-e，移到句首 M-a，到句尾 M-e，移到文档投 M-&lt;, 档尾 M-&gt; 删到行尾(剪贴) C-k ，删掉选中highlight的区域 C-w，黏贴 C-Y C-x 1 （One Window) C-x 2 （two Window) 保存 C-x C-c 查看buffer C-x C-b 切换Mode（Fundamental原始编辑模式，C-mode,lisp-mode,tex-mode,text-mode等等）M-x fundamental-mode可以变回来，可以用tab补全 查找 C-s （forward）C-r (backward)，想要看下一个就可以再按C-s或C-r。按C-g可以取消搜索跳回原位置，按enter可以让游标停在找到的地方 grep替代品（使用regex），M-x occur M-x replace 然后按tab，可以替换从光标开始所有的字符 Emacs的一些package：M-x shell 开个shell]]></content>
+      <tags>
+        <tag>tools</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[MongoDB权威指南笔记]]></title>
     <url>%2Fblog%2F2021%2F08%2F02%2FMongoDB%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E7%AC%94%E8%AE%B0%2F</url>
-    <content type="text"></content>
+    <content type="text"><![CDATA[MongoDB介绍MongoDB是一个面向文档的数据库。它没有“行”的概念，没有预定义的schema，key和value不再是固定的类型和大小。 MongoDB适合横向扩展，能自动处理跨集群的数据和负载，自动重新分配文档，以及将用户请求路由到正确的机器上。如果一个集群需要更大的容量，只需要向集群添加新服务器，MongoDB就会自动将现有数据向新服务器传送。 MongoDB支持二级索引、唯一索引、复合索引、地理空间索引、全文索引；支持聚合管道；支持时间有限的集合（session）和一定大小的集合（log）。支持存储大文件和metadata。 MongoDB主要目标是高性能，能对document进行dynamic padding，也能预分配数据文件来换取稳定的性能。它把尽可能多的内存当作缓存。但不追求关系型数据库的全部功能，而是把处理逻辑交给客户端代码实现。 MongoDB基础MongoDB中，document是基本单元，collection可以看作是一个拥有dynamic schema的表，一个实例可以有多个db，每个db有自己的collection。自带js shell。 一个基本的文档1&#123;"greeting":"Hello, world!", "foo":3&#125; 不能含有\0，这表示末尾。.和$具有特殊意义。 不能有重复的键，区分大小写，且区分类型。 文档的键值对是有序的，会对字段重新排序。 shell打开mongo后默认有3个数据库，config（分片设置）、admin（身份验证）、local（不可复制，一台服务器所有本地集合都可存储在这个数据库）。如果要使用cms数据库中的blog.posts集合，就可以用cms.blog.posts。 shell 操作1234567891011use blogpost = &#123;"title":"example"&#125;// 插入db.blog.insert(post)//读取db.blog.findOne()// 更新post.comments = []db.blog.update(&#123;title:"example"&#125;,post)// 删除db.blog.remove(&#123;title:"example"&#125;) date类型：ISODate(“2021-08-02T19:51:17.878Z”)]]></content>
   </entry>
   <entry>
     <title><![CDATA[使用sftp在不同云主机间传递文件]]></title>
