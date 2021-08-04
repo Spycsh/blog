@@ -547,7 +547,7 @@
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/blog/2021/08/02/MongoDB权威指南笔记/" class="post-title-link" itemprop="https://spycsh.github.io/blog/index.html">MongoDB权威指南笔记</a>
+                <a href="/blog/2021/08/02/MongoDB权威指南笔记/" class="post-title-link" itemprop="https://spycsh.github.io/blog/index.html">MongoDB笔记</a>
               
             
           </h1>
@@ -574,12 +574,24 @@
                 
               
 
-              <time title="创建时间：2021-08-02 16:20:08 / 修改时间：21:53:12" itemprop="dateCreated datePublished" datetime="2021-08-02T16:20:08+02:00">2021-08-02</time>
+              <time title="创建时间：2021-08-02 16:20:08" itemprop="dateCreated datePublished" datetime="2021-08-02T16:20:08+02:00">2021-08-02</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2021-08-05 00:05:41" itemprop="dateModified" datetime="2021-08-05T00:05:41+02:00">2021-08-05</time>
               
             
           </span>
@@ -613,21 +625,16 @@
 
       
         
+          <h1 id="MongoDB的一些总结与实验"><a href="#MongoDB的一些总结与实验" class="headerlink" title="MongoDB的一些总结与实验"></a>MongoDB的一些总结与实验</h1>
+          <!--noindex-->
           
-            <h1 id="MongoDB介绍"><a href="#MongoDB介绍" class="headerlink" title="MongoDB介绍"></a>MongoDB介绍</h1><p>MongoDB是一个面向文档的数据库。它没有“行”的概念，没有预定义的schema，key和value不再是固定的类型和大小。</p>
-<p>MongoDB适合横向扩展，能自动处理跨集群的数据和负载，自动重新分配文档，以及将用户请求路由到正确的机器上。如果一个集群需要更大的容量，只需要向集群添加新服务器，MongoDB就会自动将现有数据向新服务器传送。</p>
-<p>MongoDB支持二级索引、唯一索引、复合索引、地理空间索引、全文索引；支持聚合管道；支持时间有限的集合（session）和一定大小的集合（log）。支持存储大文件和metadata。</p>
-<p>MongoDB主要目标是高性能，能对document进行dynamic padding，也能预分配数据文件来换取稳定的性能。它把尽可能多的内存当作缓存。但不追求关系型数据库的全部功能，而是把处理逻辑交给客户端代码实现。</p>
-<h1 id="MongoDB基础"><a href="#MongoDB基础" class="headerlink" title="MongoDB基础"></a>MongoDB基础</h1><p>MongoDB中，document是基本单元，collection可以看作是一个拥有dynamic schema的表，一个实例可以有多个db，每个db有自己的collection。自带js shell。</p>
-<p>一个基本的文档<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">"greeting"</span>:<span class="string">"Hello, world!"</span>, <span class="string">"foo"</span>:<span class="number">3</span>&#125;</span><br></pre></td></tr></table></figure></p>
-<p>不能含有<code>\0</code>，这表示末尾。<code>.</code>和<code>$</code>具有特殊意义。</p>
-<p>不能有重复的键，区分大小写，且区分类型。</p>
-<p><strong>文档的键值对是有序的</strong>，会对字段重新排序。</p>
-<p>shell打开mongo后默认有3个数据库，config（分片设置）、admin（身份验证）、local（不可复制，一台服务器所有本地集合都可存储在这个数据库）。如果要使用cms数据库中的blog.posts集合，就可以用cms.blog.posts。</p>
-<h2 id="shell-操作"><a href="#shell-操作" class="headerlink" title="shell 操作"></a>shell 操作</h2><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">use blog</span><br><span class="line">post = &#123;<span class="string">"title"</span>:<span class="string">"example"</span>&#125;</span><br><span class="line"><span class="comment">// 插入</span></span><br><span class="line">db.blog.insert(post)</span><br><span class="line"><span class="comment">//读取</span></span><br><span class="line">db.blog.findOne()</span><br><span class="line"><span class="comment">// 更新</span></span><br><span class="line">post.comments = []</span><br><span class="line">db.blog.update(&#123;<span class="attr">title</span>:<span class="string">"example"</span>&#125;,post)</span><br><span class="line"><span class="comment">// 删除</span></span><br><span class="line">db.blog.remove(&#123;<span class="attr">title</span>:<span class="string">"example"</span>&#125;)</span><br></pre></td></tr></table></figure>
-<p>date类型：<br>ISODate(“2021-08-02T19:51:17.878Z”)</p>
-
-          
+            <div class="post-button text-center">
+              <a class="btn" href="/blog/2021/08/02/MongoDB权威指南笔记/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+         
+          <!--/noindex-->
         
       
     </div>
