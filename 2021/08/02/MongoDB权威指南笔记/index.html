@@ -131,7 +131,7 @@
 <meta property="og:site_name" content="Spycsh">
 <meta property="og:description" content="MongoDB的一些总结与实验">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2021-08-08T21:55:36.659Z">
+<meta property="og:updated_time" content="2021-08-10T20:49:20.300Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="MongoDB笔记">
 <meta name="twitter:description" content="MongoDB的一些总结与实验">
@@ -427,7 +427,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2021-08-08 23:55:36" itemprop="dateModified" datetime="2021-08-08T23:55:36+02:00">2021-08-08</time>
+                <time title="修改时间：2021-08-10 22:49:20" itemprop="dateModified" datetime="2021-08-10T22:49:20+02:00">2021-08-10</time>
               
             
           </span>
@@ -600,10 +600,79 @@
 <blockquote>
 <p>reduce一定要能够在之前的map阶段或者前一个reduce阶段的结果上反复执行。所以reduce返回的文档必须能作为reduce的第二个参数的一个元素</p>
 </blockquote>
-<h1 id="应用程序设计"><a href="#应用程序设计" class="headerlink" title="应用程序设计"></a>应用程序设计</h1><h2 id="范式化与反范式化"><a href="#范式化与反范式化" class="headerlink" title="范式化与反范式化"></a>范式化与反范式化</h2><p>student, class 表，需要范式化吗？MongoDB没有join，如果范式化，查询需要多次查询；如果不范式化，采用classes信息内嵌到student表中，更新某个字段（比如credits）就需要更新许多记录，不划算。</p>
+<h1 id="应用程序设计"><a href="#应用程序设计" class="headerlink" title="应用程序设计"></a>应用程序设计</h1><h2 id="范式化与反范式化"><a href="#范式化与反范式化" class="headerlink" title="范式化与反范式化"></a>范式化与反范式化</h2><p>student, class 表，需要范式化(normalization)吗？MongoDB没有join，如果范式化，查询需要多次查询；如果不范式化(denormalization)，把classes信息内嵌到student表中，更新某个字段（比如credits）就需要更新许多记录，不划算。</p>
 <blockquote>
 <p>第一范式（1NF，Normal Forms），列不能分成其他几列；第二范式，必须有一个主键，其他列不能只依赖于主键的一部分；第三范式，任何非主属性不依赖于其它非主属性。</p>
 </blockquote>
+<p>内嵌数据与引用数据的比较：</p>
+<hr>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">更适合内嵌</th>
+<th style="text-align:center">major</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">子文档较小</td>
+<td style="text-align:center">子文档较大</td>
+</tr>
+<tr>
+<td style="text-align:center">数据不会定期改变</td>
+<td style="text-align:center">数据经常改变</td>
+</tr>
+<tr>
+<td style="text-align:center">最终数据一致即可</td>
+<td style="text-align:center">中间阶段的数据必须一致</td>
+</tr>
+<tr>
+<td style="text-align:center">文档数据小幅增加</td>
+<td style="text-align:center">文档数据大幅增加</td>
+</tr>
+<tr>
+<td style="text-align:center">数据通常需要执行二次查询才能获得</td>
+<td style="text-align:center">数据通常不包含在结果中</td>
+</tr>
+<tr>
+<td style="text-align:center">快速读取</td>
+<td style="text-align:center">快速写入</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h1 id="副本集实践"><a href="#副本集实践" class="headerlink" title="副本集实践"></a>副本集实践</h1><p>mongodb采用副本集方式实现冗余，以下是windows上的实践过程</p>
+<p>首先建立mongoReplTest文件夹，在下面建立三个data文件夹，对应三个节点，也就是一个主节点和两个从节点组成一个副本集。</p>
+<p>然后，打开三个shell开启3个mongod服务，指定数据库存取文件夹位置，再指定同一个replication set<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mongod --port 27018 --dbpath &quot;C:\Users\Spycsh\Desktop\mongoReplTest\data1&quot; --replSet rs0</span><br><span class="line">mongod --port 27019 --dbpath &quot;C:\Users\Spycsh\Desktop\mongoReplTest\data2&quot; --replSet rs0</span><br><span class="line">mongod --port 27020 --dbpath &quot;C:\Users\Spycsh\Desktop\mongoReplTest\data3&quot; --replSet rs0</span><br></pre></td></tr></table></figure></p>
+<p>其次，打开三个shell开启3个mondo client<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mongo localhost:27018</span><br><span class="line">mongo localhost:27019</span><br><span class="line">mongo localhost:27020</span><br></pre></td></tr></table></figure></p>
+<p>在端口为27018（主节点）的clinet shell中，指定它是primary节点，在它里面建立一个叫test的数据库，建立一个叫test的表，再添加一条记录<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">rs.initiate()</span><br><span class="line">rs.conf()</span><br><span class="line">// 按一下回车就可以出现rs0:PRIMARY的标识</span><br><span class="line">rs0:PRIMARY&gt; use test</span><br><span class="line">rs0:PRIMARY&gt; db.createCollection(&quot;test&quot;)</span><br><span class="line">rs0:PRIMARY&gt; db.test.insert(&#123;&quot;test&quot;:1&#125;)</span><br><span class="line"></span><br><span class="line">rs0:PRIMARY&gt; db.test.find()</span><br><span class="line">&#123; &quot;_id&quot; : ObjectId(&quot;6112daf152385613cbb6bcfc&quot;), &quot;test&quot; : 1 &#125;</span><br></pre></td></tr></table></figure></p>
+<p>再在主节点的client shell添加从节点<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">rs0:PRIMARY&gt; rs.add(&quot;localhost:27019&quot;)</span><br><span class="line">rs0:PRIMARY&gt; rs.add(&quot;localhost:27020&quot;)</span><br></pre></td></tr></table></figure></p>
+<p>再到端口为27019，27020的从节点client shell中，按一下回车就可以发现它们都变成了SECONDARY节点，执行以下命令查看主节点复制过来的数据<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">rs0:SECONDARY&gt; rs.secondaryOk()</span><br><span class="line">rs0:SECONDARY&gt; db.test.find()</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>把主节点变成从节点<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rs.stepDown()</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>然后在另两个shell里面按按回车，就可以看到有一个原来的从节点变成了主节点。如果没有节点变成主节点，该节点60s后会重新选举当主节点。</p>
+<ul>
+<li>阻止选举<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">rs.freeze(10000)    // 从节点冻结10000秒，不能参加选举。常用在主节点维护且不希望其它节点成为主节点情况下</span><br><span class="line">rs.freeze(0)        // 从节点解除冻结</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="监控复制"><a href="#监控复制" class="headerlink" title="监控复制"></a>监控复制</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rs.status()</span><br></pre></td></tr></table></figure>
+<ul>
+<li>self 这个字段只会出现在执行rs.status()函数的成员信息中</li>
+<li>stateStr 用于描述服务器状态的字符串。</li>
+<li>uptime 从成员可达一直到现在所经历的时间，单位是秒。</li>
+<li>optimeDate 每个成员的oplog中最后一个操作发生的时间（也就是操作被同步过来的时间）。注意，这里状态是每个成员通过心跳报告上来的状态，所以optime跟实际时间可能会有几秒钟的偏差。</li>
+<li>lastHeartbeat 当前服务器最后一次收到其他成员心跳的时间。如果网络故障或者当前服务器比较繁忙，这个时间可能会是2秒钟之前。</li>
+<li>pingMs 心跳从当前服务器到达某个成员所花费的平均时间，可以根据这个字段选择从哪个成员进行同步。</li>
+<li>errmsg 成员在心跳请求中返回的状态信息。这个字段的内容通常只是一些状态信息，而不是错误信息。</li>
+</ul>
+<h3 id="复制图谱"><a href="#复制图谱" class="headerlink" title="复制图谱"></a>复制图谱</h3><p><strong>新的备份节点通常会从与自己处于同一个数据中心的其他成员进行复制</strong></p>
+<p>如果在备份节点上运行rs.status()，输出信息中会有一个名为”syncSourceId”的字段，用于表示当前成员正在从哪个成员处进行复制。</p>
+<h3 id="复制循环？"><a href="#复制循环？" class="headerlink" title="复制循环？"></a>复制循环？</h3><p>A从B复制数据，B从C，C从A，没有人能成为主节点，都不能复制写操作。</p>
+<h3 id="禁用复制链"><a href="#禁用复制链" class="headerlink" title="禁用复制链"></a>禁用复制链</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&gt; var config = rs.config()</span><br><span class="line">&gt; // 如果设置子对象不存在，就自动创建一个空的</span><br><span class="line">&gt; config.settings = config.settings || &#123;&#125;</span><br><span class="line">&gt; config.settings.allowChaining = false</span><br><span class="line">&gt; rs.reconfig(config)</span><br></pre></td></tr></table></figure>
+<p>类似星型拓补</p>
+<h2 id="主从模式"><a href="#主从模式" class="headerlink" title="主从模式"></a>主从模式</h2><p>可以看作是没有自动故障恢复功能的副本集模式，已经弃用。</p>
 
       
     </div>
@@ -867,7 +936,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#MongoDB的一些总结与实验"><span class="nav-number">1.</span> <span class="nav-text">MongoDB的一些总结与实验</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#MongoDB介绍"><span class="nav-number">2.</span> <span class="nav-text">MongoDB介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#MongoDB基础"><span class="nav-number">3.</span> <span class="nav-text">MongoDB基础</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#shell-操作"><span class="nav-number">3.1.</span> <span class="nav-text">shell 操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据类型"><span class="nav-number">3.2.</span> <span class="nav-text">数据类型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#shell-tips"><span class="nav-number">3.3.</span> <span class="nav-text">shell tips</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#增删查改文档"><span class="nav-number">4.</span> <span class="nav-text">增删查改文档</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#insert"><span class="nav-number">4.1.</span> <span class="nav-text">insert</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#delete"><span class="nav-number">4.2.</span> <span class="nav-text">delete</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#update"><span class="nav-number">4.3.</span> <span class="nav-text">update</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用修改器"><span class="nav-number">4.4.</span> <span class="nav-text">使用修改器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#upsert"><span class="nav-number">4.5.</span> <span class="nav-text">upsert</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#更新多个文档"><span class="nav-number">4.6.</span> <span class="nav-text">更新多个文档</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#查询"><span class="nav-number">5.</span> <span class="nav-text">查询</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#条件查询"><span class="nav-number">5.1.</span> <span class="nav-text">条件查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#特定类型的查询"><span class="nav-number">5.2.</span> <span class="nav-text">特定类型的查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#游标"><span class="nav-number">5.3.</span> <span class="nav-text">游标</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#limit，skip和sort"><span class="nav-number">5.3.1.</span> <span class="nav-text">limit，skip和sort</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取一致性结果"><span class="nav-number">5.3.2.</span> <span class="nav-text">获取一致性结果</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#索引"><span class="nav-number">6.</span> <span class="nav-text">索引</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#索引简介"><span class="nav-number">6.1.</span> <span class="nav-text">索引简介</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#复合索引"><span class="nav-number">6.1.1.</span> <span class="nav-text">复合索引</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#何时不应该用索引"><span class="nav-number">6.2.</span> <span class="nav-text">何时不应该用索引</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#索引类型"><span class="nav-number">6.3.</span> <span class="nav-text">索引类型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#聚合"><span class="nav-number">7.</span> <span class="nav-text">聚合</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#聚合框架"><span class="nav-number">7.1.</span> <span class="nav-text">聚合框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#管道操作符"><span class="nav-number">7.2.</span> <span class="nav-text">管道操作符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MapReduce"><span class="nav-number">7.3.</span> <span class="nav-text">MapReduce</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#例子1：wordCount"><span class="nav-number">7.3.1.</span> <span class="nav-text">例子1：wordCount</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#应用程序设计"><span class="nav-number">8.</span> <span class="nav-text">应用程序设计</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#范式化与反范式化"><span class="nav-number">8.1.</span> <span class="nav-text">范式化与反范式化</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#MongoDB的一些总结与实验"><span class="nav-number">1.</span> <span class="nav-text">MongoDB的一些总结与实验</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#MongoDB介绍"><span class="nav-number">2.</span> <span class="nav-text">MongoDB介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#MongoDB基础"><span class="nav-number">3.</span> <span class="nav-text">MongoDB基础</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#shell-操作"><span class="nav-number">3.1.</span> <span class="nav-text">shell 操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据类型"><span class="nav-number">3.2.</span> <span class="nav-text">数据类型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#shell-tips"><span class="nav-number">3.3.</span> <span class="nav-text">shell tips</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#增删查改文档"><span class="nav-number">4.</span> <span class="nav-text">增删查改文档</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#insert"><span class="nav-number">4.1.</span> <span class="nav-text">insert</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#delete"><span class="nav-number">4.2.</span> <span class="nav-text">delete</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#update"><span class="nav-number">4.3.</span> <span class="nav-text">update</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用修改器"><span class="nav-number">4.4.</span> <span class="nav-text">使用修改器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#upsert"><span class="nav-number">4.5.</span> <span class="nav-text">upsert</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#更新多个文档"><span class="nav-number">4.6.</span> <span class="nav-text">更新多个文档</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#查询"><span class="nav-number">5.</span> <span class="nav-text">查询</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#条件查询"><span class="nav-number">5.1.</span> <span class="nav-text">条件查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#特定类型的查询"><span class="nav-number">5.2.</span> <span class="nav-text">特定类型的查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#游标"><span class="nav-number">5.3.</span> <span class="nav-text">游标</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#limit，skip和sort"><span class="nav-number">5.3.1.</span> <span class="nav-text">limit，skip和sort</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#获取一致性结果"><span class="nav-number">5.3.2.</span> <span class="nav-text">获取一致性结果</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#索引"><span class="nav-number">6.</span> <span class="nav-text">索引</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#索引简介"><span class="nav-number">6.1.</span> <span class="nav-text">索引简介</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#复合索引"><span class="nav-number">6.1.1.</span> <span class="nav-text">复合索引</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#何时不应该用索引"><span class="nav-number">6.2.</span> <span class="nav-text">何时不应该用索引</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#索引类型"><span class="nav-number">6.3.</span> <span class="nav-text">索引类型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#聚合"><span class="nav-number">7.</span> <span class="nav-text">聚合</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#聚合框架"><span class="nav-number">7.1.</span> <span class="nav-text">聚合框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#管道操作符"><span class="nav-number">7.2.</span> <span class="nav-text">管道操作符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MapReduce"><span class="nav-number">7.3.</span> <span class="nav-text">MapReduce</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#例子1：wordCount"><span class="nav-number">7.3.1.</span> <span class="nav-text">例子1：wordCount</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#应用程序设计"><span class="nav-number">8.</span> <span class="nav-text">应用程序设计</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#范式化与反范式化"><span class="nav-number">8.1.</span> <span class="nav-text">范式化与反范式化</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#副本集实践"><span class="nav-number">9.</span> <span class="nav-text">副本集实践</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#监控复制"><span class="nav-number">9.1.</span> <span class="nav-text">监控复制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#复制图谱"><span class="nav-number">9.1.1.</span> <span class="nav-text">复制图谱</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#复制循环？"><span class="nav-number">9.1.2.</span> <span class="nav-text">复制循环？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#禁用复制链"><span class="nav-number">9.1.3.</span> <span class="nav-text">禁用复制链</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#主从模式"><span class="nav-number">9.2.</span> <span class="nav-text">主从模式</span></a></li></ol></li></ol></div>
             
 
           </div>
