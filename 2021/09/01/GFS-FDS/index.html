@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<script>
+    (function(){
+        if(''){
+            if (prompt('请输入文章密码') !== ''){
+                alert('密码错误！');
+                history.back();
+            }
+        }
+    })();
+</script>
+
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+  
+  
+    
+    
+  <script src="/blog/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/blog/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Mist',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="GFS简介Why GFS?痛点  GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。  文件很大，GB级，传统操作系统里文件存取的最小单位block是4KB，处理TB数据集时，用数亿KB大小的小文件是不明智的。  处理大型数据集，对块的缓存没有意义">
+<meta name="keywords" content="Data Storage">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GFS &amp; FDS">
+<meta property="og:url" content="https://spycsh.github.io/blog/2021/09/01/GFS-FDS/index.html">
+<meta property="og:site_name" content="Spycsh">
+<meta property="og:description" content="GFS简介Why GFS?痛点  GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。  文件很大，GB级，传统操作系统里文件存取的最小单位block是4KB，处理TB数据集时，用数亿KB大小的小文件是不明智的。  处理大型数据集，对块的缓存没有意义">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2021-09-08T16:18:57.153Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="GFS &amp; FDS">
+<meta name="twitter:description" content="GFS简介Why GFS?痛点  GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。  文件很大，GB级，传统操作系统里文件存取的最小单位block是4KB，处理TB数据集时，用数亿KB大小的小文件是不明智的。  处理大型数据集，对块的缓存没有意义">
+
+
+
+
+
+
+  <link rel="canonical" href="https://spycsh.github.io/blog/2021/09/01/GFS-FDS/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>GFS & FDS | Spycsh</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Spycsh</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">无计花间住</p>
+      
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/blog/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/blog/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-诗">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/blog/2018/12/13/少年的诗/" rel="section"><i class="menu-item-icon fa fa-fw fa-binoculars"></i> <br>诗</a>
+
+  </li>
+
+      
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>搜索</a>
+        </li>
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://spycsh.github.io/blog/blog/2021/09/01/GFS-FDS/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Csh">
+      <meta itemprop="description" content="TEST">
+      <meta itemprop="image" content="/blog/images/Haruhi.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spycsh">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">GFS & FDS
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          
+
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2021-09-01 22:45:46" itemprop="dateCreated datePublished" datetime="2021-09-01T22:45:46+08:00">2021-09-01</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2021-09-09 00:18:57" itemprop="dateModified" datetime="2021-09-09T00:18:57+08:00">2021-09-09</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="GFS"><a href="#GFS" class="headerlink" title="GFS"></a>GFS</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>Why GFS?痛点</p>
+<ul>
+<li><p>GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。</p>
+</li>
+<li><p>文件很大，GB级，传统操作系统里文件存取的最小单位block是4KB，处理TB数据集时，用数亿KB大小的小文件是不明智的。</p>
+</li>
+<li><p>处理大型数据集，对块的缓存没有意义，因为不够缓存，只能流式处理，顺序读，append写。<strong>不再存在overwrite写与随机写</strong>。</p>
+</li>
+<li><p>应用程序与API的协同设计。只保证原子性的追加，保证多客户端同时追加，而<strong>不需要额外的同步来保证数据的一致性</strong>。</p>
+</li>
+</ul>
+<h2 id="文件"><a href="#文件" class="headerlink" title="文件"></a>文件</h2><p>GFS中，一个大文件会分为多个chunks，一个chunk是固定64MB的，是存储的基本单元，一个chunk对应了一个linux file。</p>
+<p>这么大的chunk size，好处是减少了clinet和master的交互次数，也减少了metadata的overhead。</p>
+<p>碎片化是个问题，因此采用惰性空间分配方式。这种分配方式只在需要时分配资源，就像singleton设计模式一样。但是仍然有坏处，那就是当很多client都访问这个file时，chunk因为很大，很容易成为hot spots。</p>
+<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><p>GFS有一个master，多个chunkserver，master和chunkserver都可能和client交互。</p>
+<p>master存储metadata，包括namespaces，access control information（ACLs）, mapping from files to chunks，和chunks的地址。所有metadata存在master内存中，前两种是被持久化在本地磁盘和远程机器的operation log中。使用log可以让我们简单地更新主节点状态。</p>
+<p>master并不持久化存储chunk副本地址，只是启动时向每个chunkserver确认它们上面chunk的地址。</p>
+<h2 id="处理过程"><a href="#处理过程" class="headerlink" title="处理过程"></a>处理过程</h2><p>GFS 中，clinet只向master讯问数据块放在哪个chunkserver上（用文件名和字节偏移翻译成chunk index，发index和文件名给master），得到结果后后，然后去向最近的chunkserver请求数据。它不是直接向master请求数据。client同样对这些结果进行缓存，一段时间内都从同一个chunkserver请求数据。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">论文2.4节</span><br><span class="line">1. Application invokes read (filename, offset)</span><br><span class="line">2. Client library translates offset to chunk index and</span><br><span class="line">sends it to master (filename, chunk index)</span><br><span class="line">3. Master responds with handle (chunk handle, replica</span><br><span class="line">locations)</span><br><span class="line">4. Client library selects location and sends (handle,</span><br><span class="line">offset) to it</span><br><span class="line">5. Chunk server responds with requested data</span><br><span class="line">6. Data is forwarded to application</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"># Master上的Metadata</span><br><span class="line">## 存储了file对chunk的映射, **一个很大的文件可以被分成多个chunk，比如下面的043131文件被分到chunk4, chunk5上，都是连续存储的，利用chunk index可以找到对应的chunk**</span><br><span class="line">/logs/021512.log: B1, B2, B3</span><br><span class="line">/logs/043131.log: B4, B5</span><br><span class="line">## block(chunk)在哪些节点上（地址）</span><br><span class="line">B1: A, B, D</span><br><span class="line">B2: B, D, E</span><br><span class="line">B3: A, B, E</span><br><span class="line">B4: A, B, E</span><br><span class="line">B5: C, E, D</span><br><span class="line"></span><br><span class="line">client 首先在本地计算chunk index，利用chunk size固定是64MB这一个特性，如果我的文件是640MB，我想读后一半的数据，chunk index就可以计算出来是5 ~ 9(假设从0开始)，然后，这里比如043131.log大小是120M（用来两个chunk存储它），我想要读043131.log的一部分数据（offset=80MB~120MB部分)，由80MB/64MB=1, 120MB/64MB=1那么就计算出chunk index=1~1，那么master收到文件名和chunk index之后，就会在metadata内存中去通过文件名找到对应的chunks，也就是B4、B5，通过index=1发现应该读B5，就会去看存有B5的replicas（chunkserver）的地址，也就是C,E,D，返回给client这些server的hostname。由此一来，client就可以缓存这些hostnames，然后挑最近的去请求相应的数据了，下一次client就不用再询问master，直接通过缓存里去拿就行了。</span><br></pre></td></tr></table></figure>
+<h2 id="master高可用"><a href="#master高可用" class="headerlink" title="master高可用"></a>master高可用</h2><p>master单点故障问题，需要一个operation log来确保，它是持久化的在master和其backup上的。master存储metadata，所有对metadata的修改都是有操作日志的。master有冗余的backup，确保master挂了，backup可以通过operation log反推出master的state。</p>
+<p>gfs在什么时间写master的op log呢？每次client和master的交互，gfs会同步的将操作日志记录在本地，并发送到backup节点，操作日志写入到本地和远程的磁盘都成功，才会返回给客户端。</p>
+<p>如何处理op log不断增大，从而减缓master startup恢复状态的问题呢？使用checkpoint，checkpoint前的数据都已落盘。op log只记录之后对metadata的操作。op log是一个compact B-tree，可以映射到内存中（论文2.6.3），每次checkpoint过程是在另一个线程中完成的，因此不会阻塞。只有成功的checkpoint会被用来恢复状态，失败的会被跳过。</p>
+<h2 id="一致性模型"><a href="#一致性模型" class="headerlink" title="一致性模型"></a>一致性模型</h2><p>gfs对外提供的一致性保证中，提供了4种语义。分别是：</p>
+<p>consistent：所有client都能读到相同的data<br>defined：consistent且都能完整的读到最新的写入<br>inconsistent and also undefined：不同的client在不同的时间看到不同的内容。（我的理解是：这个状态下的data已经损坏）<br>undefined but consistent：所有client都能读到相同的data，但data可能是错误的（就是发生了并发写的问题导致data错误）</p>
+<h2 id="API"><a href="#API" class="headerlink" title="API"></a>API</h2><p>GFS不是POSIX-compliant的，但是提供了create，delete，open，close，read和write操作。另外还支持了snapshot(create a compy of a file or a directory tree at a low cost)和append(allow multiple clients to append data to the same file concurrrently)操作。</p>
+<p>另外还有update操作，是对metadata的改动。为了consistency，GFS保证了只在primary上定义了update的order，所有replica follow，用lease保证了正确性。每个周期T，master会给一个chunkserver一个lease指定它是primary。</p>
+<p>读操作上面已经讲过了，下面介绍写操作。write 操作可以将任意⻓度 len 的数据写入到任意指定文件的位置 offset。</p>
+<p>首先依然是client translate请求(file name ,chunk index)并发给master，master回应一个chunk handle和replica locations。</p>
+<p>其次，client把要写的数据发到所有的副本上，数据将被存在chunkservers的internal buffers上，此时还没有落盘。</p>
+<p>最后，client发写请求给primary（Sync请求），由primary决定serial order，并告知副本这个order，副本把buffer里的数据依照相同顺序写入磁盘。然后，primary等待所有从副本的sync响应，然后回复client成功响应。</p>
+<p>我们将拥有一致的副本，然而，文件区域将会包含不同clients的mingled fragments，比如说对不同chunks的写入，由于每个chunk有一个primary，但不代表不同chunks的primary相同，因此可能顺序不一样，因此write是consistent的，但是是undefined的。</p>
+<p>record append 操作可以原子的将 len&lt;=16MB 的数据写入到指定文件的末尾。不是简单的 offset 等于文件末尾的 write 操作。 record append 是具有原子特性的操作。</p>
+<p>下面用两个例子简述差别，摘自<a href="https://www.infoq.cn/article/6r4tafyggnyynu7tesiy" target="_blank" rel="noopener">链接</a>，<a href="https://www.modb.pro/db/81505" target="_blank" rel="noopener">链接</a></p>
+<p>例子 1，文件目前有 2 个 chunk，分别是 chunk1, chunk2。</p>
+<p>Client 1 要在 54MB 的位置写入 20MB 数据。这写入跨越了边界，要分解成 2 个操作，第一个操 作写入 chunk1 最后 10 MB，第二个操作写入 chunk2 的开头 10MB。Client 2 也要在 54MB 的位置写入 20MB 的数据。这个写入也跨越边界，也要分解为 2 个操作， 作为第三个操作写入 chunk1 最后 10 MB，作为第四个操作写入 chunk2 的开头 10MB。</p>
+<p>2 个客户端并发写入数据，那么第一个操作和第三个操作在 chunk1 上就是并发执行的，第二个操作和第四个操作在 chunk2 上并发执行，如果 chunk1 的先执行第一操作再执行第三个操作， chunk2 先执行第四个操作再执行第二个操作，那么最后，在 chunk1 上会保留 client 1 的写入的 数据，在 chunk2 上保留了 client 2 的写入的数据。虽然 client 1 和 client 2 的写入都成功了，但最后既不是 client 1 想要的结果，也不是 client 2 想要的结果。最后的结果是 client 1 和 client 2 写入 的混合。对于 client 1 和 client 2 来说，他们操作都不是原子的。</p>
+<p>例子 2，文件目前有 2 个 chunk，分别是 chunk1, chunk2。</p>
+<p>Client 要在 54MB 的位置写入 20MB 数据。这写入跨越了边界，要分解成 2 个操作，第一个操作 写入 chunk1 最后 10 MB，第二个操作写入 chunk2 的开头 10MB。chunk1 执行第一个操作成功 了，chunk2 执行第二个操作失败了，也就是写入的这部分数据，一部分是成功的，一部分是 失败的，这也不是原子操作。</p>
+<p>接下来看 record append。由于 record append 最多能写入 16MB 的数据，并且当写入的数据量 超过块的剩余空间时，剩余的空间会被填充，这次写入操作会在下个块重试，这 2 点保证了 record append 操作只会在一个块上生效。这样就避免了跨越边界分解成多个操作，从而也就避免了，写入的数据一部分成功一部分失败，也避免了并发写入数据混合在一起，这 2 种非原子性的行为。</p>
+<h2 id="Master操作"><a href="#Master操作" class="headerlink" title="Master操作"></a>Master操作</h2><p>控制流与数据流分离是GFS的最大特点，而Master主要做的事情就是控制流。</p>
+<ul>
+<li><p>Namespace management and locking<br>namespace会表示成一个lookup table，存储了全路径名对metadata的映射，<br>internal nodes（文件夹）上读锁（读时别人不能写，删，重命名），leaf nodes（文件）上读写锁（写时别人不能读写删改）。</p>
+</li>
+<li><p>Replica placement  </p>
+</li>
+<li>Creating, re-replicating and re-balancing replicas<br>新的副本加到disk使用率最低的chunkserver上，限制每个chunkserver上recent的replica creation数量</li>
+<li>garbage collection<br>文件删除会由master log，转为hidden file（回收站），3日后删除，metadata中消除</li>
+<li>stale replica detection<br>如果一个replica fail了它就跟不上primary了，也就是过时了，需要区分过时的replica和不过时的，就要记录一个chunk version number，这个number每当授予一次lease，就会增加1。</li>
+</ul>
+<h2 id="容错"><a href="#容错" class="headerlink" title="容错"></a>容错</h2><p>Master的容错是由shadow master提供的，实际是冗余容错，它会在master crash时提供read-only的服务。</p>
+<p>Chunkserver的容错是由version number确保的，正如前面提到的。stale的chunkserver会被删除。</p>
+<h2 id="GFS-与-HDFS"><a href="#GFS-与-HDFS" class="headerlink" title="GFS 与 HDFS"></a>GFS 与 HDFS</h2><table>
+<thead>
+<tr>
+<th style="text-align:center">GFS</th>
+<th style="text-align:center">HDFS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">Master</td>
+<td style="text-align:center">Namenode</td>
+</tr>
+<tr>
+<td style="text-align:center">Chunkserver</td>
+<td style="text-align:center">DataNode</td>
+</tr>
+<tr>
+<td style="text-align:center">Operation Log Journal</td>
+<td style="text-align:center">Edit Log</td>
+</tr>
+<tr>
+<td style="text-align:center">Chunk</td>
+<td style="text-align:center">Block</td>
+</tr>
+<tr>
+<td style="text-align:center">Random ﬁle writes possible</td>
+<td style="text-align:center">Only append is possible</td>
+</tr>
+<tr>
+<td style="text-align:center">Multiple write/reader model</td>
+<td style="text-align:center">Single write/multiple reader model</td>
+</tr>
+<tr>
+<td style="text-align:center">Default chunk size: 64MB</td>
+<td style="text-align:center">Default chunk size: 128MB</td>
+</tr>
+</tbody>
+</table>
+<h1 id="FDS"><a href="#FDS" class="headerlink" title="FDS"></a>FDS</h1><p>Flat Datacenter Storage (FDS): to “move the computation to data”, because remote access is slow due to oversubscription.</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+      <div>
+        
+
+
+
+  
+
+
+
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Csh</li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    
+    <a href="https://spycsh.github.io/blog/2021/09/01/GFS-FDS/" title="GFS & FDS">https://spycsh.github.io/blog/2021/09/01/GFS-FDS/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！</li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/Data-Storage/" rel="tag"># Data Storage</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2021/08/27/云原生，Docker和K8s/" rel="next" title="云原生，Docker和K8s">
+                <i class="fa fa-chevron-left"></i> 云原生，Docker和K8s
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/blog/images/Haruhi.jpg" alt="Csh">
+            
+              <p class="site-author-name" itemprop="name">Csh</p>
+              <p class="site-description motion-element" itemprop="description">TEST</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/blog/archives">
+                
+                    <span class="site-state-item-count">40</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/blog/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">0</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/blog/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">9</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://github.com/Spycsh" title="GitHub &rarr; https://github.com/Spycsh" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  
+                  
+                    
+                  
+                  
+                    
+                  
+                  <a href="https://757407490@qq.com" title="QQ &rarr; https://757407490@qq.com" rel="noopener" target="_blank"><i class="fa fa-fw fa-qq"></i>QQ</a>
+                </span>
+              
+            </div>
+          
+
+          
+             <div class="cc-license motion-element" itemprop="license">
+              
+                
+              
+              
+              
+              <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/blog/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+             </div>
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#GFS"><span class="nav-number">1.</span> <span class="nav-text">GFS</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#简介"><span class="nav-number">1.1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#文件"><span class="nav-number">1.2.</span> <span class="nav-text">文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#架构"><span class="nav-number">1.3.</span> <span class="nav-text">架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#处理过程"><span class="nav-number">1.4.</span> <span class="nav-text">处理过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#master高可用"><span class="nav-number">1.5.</span> <span class="nav-text">master高可用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#一致性模型"><span class="nav-number">1.6.</span> <span class="nav-text">一致性模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API"><span class="nav-number">1.7.</span> <span class="nav-text">API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Master操作"><span class="nav-number">1.8.</span> <span class="nav-text">Master操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容错"><span class="nav-number">1.9.</span> <span class="nav-text">容错</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GFS-与-HDFS"><span class="nav-number">1.10.</span> <span class="nav-text">GFS 与 HDFS</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#FDS"><span class="nav-number">2.</span> <span class="nav-text">FDS</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Csh</span>
+
+  
+
+  
+</div>
+
+<!--
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> v6.6.0</div>
+
+
+
+
+-->
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/blog/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/blog/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/blog/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/blog/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/blog/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script>
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+  
+
+  
+
+
+</body>
+</html>
