@@ -365,6 +365,156 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://spycsh.github.io/blog/blog/2021/09/09/NoSQL-Databases/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Csh">
+      <meta itemprop="description" content="TEST">
+      <meta itemprop="image" content="/blog/images/Haruhi.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Spycsh">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                
+                <a href="/blog/2021/09/09/NoSQL-Databases/" class="post-title-link" itemprop="https://spycsh.github.io/blog/index.html">NoSQL Databases</a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          
+
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2021-09-09 13:48:46 / 修改时间：16:10:58" itemprop="dateCreated datePublished" datetime="2021-09-09T13:48:46+08:00">2021-09-09</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h1 id="NoSQL演变和BigTable-Cassandra-Neo4j"><a href="#NoSQL演变和BigTable-Cassandra-Neo4j" class="headerlink" title="NoSQL演变和BigTable, Cassandra, Neo4j"></a>NoSQL演变和BigTable, Cassandra, Neo4j</h1>
+          <!--noindex-->
+          
+            <div class="post-button text-center">
+              <a class="btn" href="/blog/2021/09/09/NoSQL-Databases/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+         
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://spycsh.github.io/blog/blog/2021/09/01/GFS-FDS/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -429,7 +579,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2021-09-09 00:18:57" itemprop="dateModified" datetime="2021-09-09T00:18:57+08:00">2021-09-09</time>
+                <time title="修改时间：2021-09-09 13:51:45" itemprop="dateModified" datetime="2021-09-09T13:51:45+08:00">2021-09-09</time>
               
             
           </span>
@@ -463,100 +613,16 @@
 
       
         
+          <h1 id="GFS-FDS论文总结"><a href="#GFS-FDS论文总结" class="headerlink" title="GFS FDS论文总结"></a>GFS FDS论文总结</h1>
+          <!--noindex-->
           
-            <h1 id="GFS"><a href="#GFS" class="headerlink" title="GFS"></a>GFS</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>Why GFS?痛点</p>
-<ul>
-<li><p>GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。</p>
-</li>
-<li><p>文件很大，GB级，传统操作系统里文件存取的最小单位block是4KB，处理TB数据集时，用数亿KB大小的小文件是不明智的。</p>
-</li>
-<li><p>处理大型数据集，对块的缓存没有意义，因为不够缓存，只能流式处理，顺序读，append写。<strong>不再存在overwrite写与随机写</strong>。</p>
-</li>
-<li><p>应用程序与API的协同设计。只保证原子性的追加，保证多客户端同时追加，而<strong>不需要额外的同步来保证数据的一致性</strong>。</p>
-</li>
-</ul>
-<h2 id="文件"><a href="#文件" class="headerlink" title="文件"></a>文件</h2><p>GFS中，一个大文件会分为多个chunks，一个chunk是固定64MB的，是存储的基本单元，一个chunk对应了一个linux file。</p>
-<p>这么大的chunk size，好处是减少了clinet和master的交互次数，也减少了metadata的overhead。</p>
-<p>碎片化是个问题，因此采用惰性空间分配方式。这种分配方式只在需要时分配资源，就像singleton设计模式一样。但是仍然有坏处，那就是当很多client都访问这个file时，chunk因为很大，很容易成为hot spots。</p>
-<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><p>GFS有一个master，多个chunkserver，master和chunkserver都可能和client交互。</p>
-<p>master存储metadata，包括namespaces，access control information（ACLs）, mapping from files to chunks，和chunks的地址。所有metadata存在master内存中，前两种是被持久化在本地磁盘和远程机器的operation log中。使用log可以让我们简单地更新主节点状态。</p>
-<p>master并不持久化存储chunk副本地址，只是启动时向每个chunkserver确认它们上面chunk的地址。</p>
-<h2 id="处理过程"><a href="#处理过程" class="headerlink" title="处理过程"></a>处理过程</h2><p>GFS 中，clinet只向master讯问数据块放在哪个chunkserver上（用文件名和字节偏移翻译成chunk index，发index和文件名给master），得到结果后后，然后去向最近的chunkserver请求数据。它不是直接向master请求数据。client同样对这些结果进行缓存，一段时间内都从同一个chunkserver请求数据。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">论文2.4节</span><br><span class="line">1. Application invokes read (filename, offset)</span><br><span class="line">2. Client library translates offset to chunk index and</span><br><span class="line">sends it to master (filename, chunk index)</span><br><span class="line">3. Master responds with handle (chunk handle, replica</span><br><span class="line">locations)</span><br><span class="line">4. Client library selects location and sends (handle,</span><br><span class="line">offset) to it</span><br><span class="line">5. Chunk server responds with requested data</span><br><span class="line">6. Data is forwarded to application</span><br></pre></td></tr></table></figure>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"># Master上的Metadata</span><br><span class="line">## 存储了file对chunk的映射, **一个很大的文件可以被分成多个chunk，比如下面的043131文件被分到chunk4, chunk5上，都是连续存储的，利用chunk index可以找到对应的chunk**</span><br><span class="line">/logs/021512.log: B1, B2, B3</span><br><span class="line">/logs/043131.log: B4, B5</span><br><span class="line">## block(chunk)在哪些节点上（地址）</span><br><span class="line">B1: A, B, D</span><br><span class="line">B2: B, D, E</span><br><span class="line">B3: A, B, E</span><br><span class="line">B4: A, B, E</span><br><span class="line">B5: C, E, D</span><br><span class="line"></span><br><span class="line">client 首先在本地计算chunk index，利用chunk size固定是64MB这一个特性，如果我的文件是640MB，我想读后一半的数据，chunk index就可以计算出来是5 ~ 9(假设从0开始)，然后，这里比如043131.log大小是120M（用来两个chunk存储它），我想要读043131.log的一部分数据（offset=80MB~120MB部分)，由80MB/64MB=1, 120MB/64MB=1那么就计算出chunk index=1~1，那么master收到文件名和chunk index之后，就会在metadata内存中去通过文件名找到对应的chunks，也就是B4、B5，通过index=1发现应该读B5，就会去看存有B5的replicas（chunkserver）的地址，也就是C,E,D，返回给client这些server的hostname。由此一来，client就可以缓存这些hostnames，然后挑最近的去请求相应的数据了，下一次client就不用再询问master，直接通过缓存里去拿就行了。</span><br></pre></td></tr></table></figure>
-<h2 id="master高可用"><a href="#master高可用" class="headerlink" title="master高可用"></a>master高可用</h2><p>master单点故障问题，需要一个operation log来确保，它是持久化的在master和其backup上的。master存储metadata，所有对metadata的修改都是有操作日志的。master有冗余的backup，确保master挂了，backup可以通过operation log反推出master的state。</p>
-<p>gfs在什么时间写master的op log呢？每次client和master的交互，gfs会同步的将操作日志记录在本地，并发送到backup节点，操作日志写入到本地和远程的磁盘都成功，才会返回给客户端。</p>
-<p>如何处理op log不断增大，从而减缓master startup恢复状态的问题呢？使用checkpoint，checkpoint前的数据都已落盘。op log只记录之后对metadata的操作。op log是一个compact B-tree，可以映射到内存中（论文2.6.3），每次checkpoint过程是在另一个线程中完成的，因此不会阻塞。只有成功的checkpoint会被用来恢复状态，失败的会被跳过。</p>
-<h2 id="一致性模型"><a href="#一致性模型" class="headerlink" title="一致性模型"></a>一致性模型</h2><p>gfs对外提供的一致性保证中，提供了4种语义。分别是：</p>
-<p>consistent：所有client都能读到相同的data<br>defined：consistent且都能完整的读到最新的写入<br>inconsistent and also undefined：不同的client在不同的时间看到不同的内容。（我的理解是：这个状态下的data已经损坏）<br>undefined but consistent：所有client都能读到相同的data，但data可能是错误的（就是发生了并发写的问题导致data错误）</p>
-<h2 id="API"><a href="#API" class="headerlink" title="API"></a>API</h2><p>GFS不是POSIX-compliant的，但是提供了create，delete，open，close，read和write操作。另外还支持了snapshot(create a compy of a file or a directory tree at a low cost)和append(allow multiple clients to append data to the same file concurrrently)操作。</p>
-<p>另外还有update操作，是对metadata的改动。为了consistency，GFS保证了只在primary上定义了update的order，所有replica follow，用lease保证了正确性。每个周期T，master会给一个chunkserver一个lease指定它是primary。</p>
-<p>读操作上面已经讲过了，下面介绍写操作。write 操作可以将任意⻓度 len 的数据写入到任意指定文件的位置 offset。</p>
-<p>首先依然是client translate请求(file name ,chunk index)并发给master，master回应一个chunk handle和replica locations。</p>
-<p>其次，client把要写的数据发到所有的副本上，数据将被存在chunkservers的internal buffers上，此时还没有落盘。</p>
-<p>最后，client发写请求给primary（Sync请求），由primary决定serial order，并告知副本这个order，副本把buffer里的数据依照相同顺序写入磁盘。然后，primary等待所有从副本的sync响应，然后回复client成功响应。</p>
-<p>我们将拥有一致的副本，然而，文件区域将会包含不同clients的mingled fragments，比如说对不同chunks的写入，由于每个chunk有一个primary，但不代表不同chunks的primary相同，因此可能顺序不一样，因此write是consistent的，但是是undefined的。</p>
-<p>record append 操作可以原子的将 len&lt;=16MB 的数据写入到指定文件的末尾。不是简单的 offset 等于文件末尾的 write 操作。 record append 是具有原子特性的操作。</p>
-<p>下面用两个例子简述差别，摘自<a href="https://www.infoq.cn/article/6r4tafyggnyynu7tesiy" target="_blank" rel="noopener">链接</a>，<a href="https://www.modb.pro/db/81505" target="_blank" rel="noopener">链接</a></p>
-<p>例子 1，文件目前有 2 个 chunk，分别是 chunk1, chunk2。</p>
-<p>Client 1 要在 54MB 的位置写入 20MB 数据。这写入跨越了边界，要分解成 2 个操作，第一个操 作写入 chunk1 最后 10 MB，第二个操作写入 chunk2 的开头 10MB。Client 2 也要在 54MB 的位置写入 20MB 的数据。这个写入也跨越边界，也要分解为 2 个操作， 作为第三个操作写入 chunk1 最后 10 MB，作为第四个操作写入 chunk2 的开头 10MB。</p>
-<p>2 个客户端并发写入数据，那么第一个操作和第三个操作在 chunk1 上就是并发执行的，第二个操作和第四个操作在 chunk2 上并发执行，如果 chunk1 的先执行第一操作再执行第三个操作， chunk2 先执行第四个操作再执行第二个操作，那么最后，在 chunk1 上会保留 client 1 的写入的 数据，在 chunk2 上保留了 client 2 的写入的数据。虽然 client 1 和 client 2 的写入都成功了，但最后既不是 client 1 想要的结果，也不是 client 2 想要的结果。最后的结果是 client 1 和 client 2 写入 的混合。对于 client 1 和 client 2 来说，他们操作都不是原子的。</p>
-<p>例子 2，文件目前有 2 个 chunk，分别是 chunk1, chunk2。</p>
-<p>Client 要在 54MB 的位置写入 20MB 数据。这写入跨越了边界，要分解成 2 个操作，第一个操作 写入 chunk1 最后 10 MB，第二个操作写入 chunk2 的开头 10MB。chunk1 执行第一个操作成功 了，chunk2 执行第二个操作失败了，也就是写入的这部分数据，一部分是成功的，一部分是 失败的，这也不是原子操作。</p>
-<p>接下来看 record append。由于 record append 最多能写入 16MB 的数据，并且当写入的数据量 超过块的剩余空间时，剩余的空间会被填充，这次写入操作会在下个块重试，这 2 点保证了 record append 操作只会在一个块上生效。这样就避免了跨越边界分解成多个操作，从而也就避免了，写入的数据一部分成功一部分失败，也避免了并发写入数据混合在一起，这 2 种非原子性的行为。</p>
-<h2 id="Master操作"><a href="#Master操作" class="headerlink" title="Master操作"></a>Master操作</h2><p>控制流与数据流分离是GFS的最大特点，而Master主要做的事情就是控制流。</p>
-<ul>
-<li><p>Namespace management and locking<br>namespace会表示成一个lookup table，存储了全路径名对metadata的映射，<br>internal nodes（文件夹）上读锁（读时别人不能写，删，重命名），leaf nodes（文件）上读写锁（写时别人不能读写删改）。</p>
-</li>
-<li><p>Replica placement  </p>
-</li>
-<li>Creating, re-replicating and re-balancing replicas<br>新的副本加到disk使用率最低的chunkserver上，限制每个chunkserver上recent的replica creation数量</li>
-<li>garbage collection<br>文件删除会由master log，转为hidden file（回收站），3日后删除，metadata中消除</li>
-<li>stale replica detection<br>如果一个replica fail了它就跟不上primary了，也就是过时了，需要区分过时的replica和不过时的，就要记录一个chunk version number，这个number每当授予一次lease，就会增加1。</li>
-</ul>
-<h2 id="容错"><a href="#容错" class="headerlink" title="容错"></a>容错</h2><p>Master的容错是由shadow master提供的，实际是冗余容错，它会在master crash时提供read-only的服务。</p>
-<p>Chunkserver的容错是由version number确保的，正如前面提到的。stale的chunkserver会被删除。</p>
-<h2 id="GFS-与-HDFS"><a href="#GFS-与-HDFS" class="headerlink" title="GFS 与 HDFS"></a>GFS 与 HDFS</h2><table>
-<thead>
-<tr>
-<th style="text-align:center">GFS</th>
-<th style="text-align:center">HDFS</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">Master</td>
-<td style="text-align:center">Namenode</td>
-</tr>
-<tr>
-<td style="text-align:center">Chunkserver</td>
-<td style="text-align:center">DataNode</td>
-</tr>
-<tr>
-<td style="text-align:center">Operation Log Journal</td>
-<td style="text-align:center">Edit Log</td>
-</tr>
-<tr>
-<td style="text-align:center">Chunk</td>
-<td style="text-align:center">Block</td>
-</tr>
-<tr>
-<td style="text-align:center">Random ﬁle writes possible</td>
-<td style="text-align:center">Only append is possible</td>
-</tr>
-<tr>
-<td style="text-align:center">Multiple write/reader model</td>
-<td style="text-align:center">Single write/multiple reader model</td>
-</tr>
-<tr>
-<td style="text-align:center">Default chunk size: 64MB</td>
-<td style="text-align:center">Default chunk size: 128MB</td>
-</tr>
-</tbody>
-</table>
-<h1 id="FDS"><a href="#FDS" class="headerlink" title="FDS"></a>FDS</h1><p>Flat Datacenter Storage (FDS): to “move the computation to data”, because remote access is slow due to oversubscription.</p>
-
-          
+            <div class="post-button text-center">
+              <a class="btn" href="/blog/2021/09/01/GFS-FDS/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+         
+          <!--/noindex-->
         
       
     </div>
@@ -846,7 +912,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2021-08-26 23:24:13" itemprop="dateModified" datetime="2021-08-26T23:24:13+08:00">2021-08-26</time>
+                <time title="修改时间：2021-09-09 13:17:25" itemprop="dateModified" datetime="2021-09-09T13:17:25+08:00">2021-09-09</time>
               
             
           </span>
@@ -880,34 +946,16 @@
 
       
         
+          <h1 id="踩坑指南"><a href="#踩坑指南" class="headerlink" title="踩坑指南"></a>踩坑指南</h1>
+          <!--noindex-->
           
-            <p>踩坑指南</p>
-<p><a href="https://github.com/emqx/emqx" target="_blank" rel="noopener">https://github.com/emqx/emqx</a></p>
-<p><a href="https://docs.microsoft.com/en-us/cpp/build/vscpp-step-0-installation?view=msvc-160" target="_blank" rel="noopener">https://docs.microsoft.com/en-us/cpp/build/vscpp-step-0-installation?view=msvc-160</a></p>
-<p>step4</p>
-<p>Choose workloads: “Desktop development with C++”</p>
-<p>powershell</p>
-<p>$Env:PATH</p>
-<p>paht改成path<br>lnik.exe拼错</p>
-<p>make 29行错，which bash有问题，选错了bash，把bash目录提到环境变量最上面</p>
-<p>C:\Users\Spycsh\Desktop\emqx&gt;make<br>make: *** [Makefile:29: ensure-rebar3] Error 1</p>
-<p>用git bash make</p>
-<p>可能git不能https因为vpn，因此要配置vpn的代理地址<br>C:\Users\Spycsh&gt;git config –global https.proxy <a href="https://127.0.0.1:7890" target="_blank" rel="noopener">https://127.0.0.1:7890</a></p>
-<p>C:\Users\Spycsh&gt;git config –global https.proxy <a href="https://127.0.0.1:7890" target="_blank" rel="noopener">https://127.0.0.1:7890</a></p>
-<p>curl: (56) OpenSSL SSL_read: Connection was reset错误</p>
-<p>git config –global http.sslVerify “false”</p>
-<!-- installer中下载
-Windows Universal C Runtime -->
-<p>decoder.c<br>c:/Users/Spycsh/Desktop/emqx/c_src/decoder.c(4): fatal error C1083: Cannot open include file: ‘assert.h’: No such file or directory</p>
-<p>←[0mmake: *** [Makefile:78: emqx] Error 1</p>
-<p>下载individual component：windows universal CRT SDK，不必配置环境变量C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\ucrt？：<br>这将会包括10.0.10240.0版本的ucrt，而下面的assert.h才是</p>
-<p>？以上方法仍存疑</p>
-<p>用在vs studio打开项目的方法解决</p>
-<p>然后vcvarsall.bat x86_amd64</p>
-<p>Compiling emqx_resource<br>Compiling emqx_authn<br>Compiling emqx_data_bridge<br>Compiling emqx_rule_actions<br>Compiling emqx_connector<br>[relup_helper] running gen_appups<br>operable program or batch file.not recognized as an internal or external command,<br>…<br>←[1mUncaught error in rebar_core. Run with DIAGNOSTIC=1 to see stacktrace or consult rebar3.crashdump<br>←[0mWhen submitting a bug report, please include the output of <code>rebar3 report &quot;your command&quot;</code><br>make: *** [Makefile:78: emqx] Error 1</p>
-<p>改了rebar3要把原来_build文件夹删掉</p>
-
-          
+            <div class="post-button text-center">
+              <a class="btn" href="/blog/2021/08/25/在windows上从源构建emqx/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+         
+          <!--/noindex-->
         
       
     </div>
@@ -1907,173 +1955,11 @@ Windows Universal C Runtime -->
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://spycsh.github.io/blog/blog/2021/06/29/DDIA-数据密集型应用笔记-II/">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Csh">
-      <meta itemprop="description" content="TEST">
-      <meta itemprop="image" content="/blog/images/Haruhi.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Spycsh">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                
-                <a href="/blog/2021/06/29/DDIA-数据密集型应用笔记-II/" class="post-title-link" itemprop="https://spycsh.github.io/blog/index.html">DDIA 数据密集型应用笔记 (II)</a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          
-
-          <span class="post-time">
-
-            
-            
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2021-06-29 23:53:00" itemprop="dateCreated datePublished" datetime="2021-06-29T23:53:00+08:00">2021-06-29</time>
-            
-
-            
-              
-
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">更新于</span>
-                
-                <time title="修改时间：2021-07-12 22:50:01" itemprop="dateModified" datetime="2021-07-12T22:50:01+08:00">2021-07-12</time>
-              
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h1 id="Design-Data-intensive-applications-II-–-分布式数据系统"><a href="#Design-Data-intensive-applications-II-–-分布式数据系统" class="headerlink" title="Design Data-intensive applications (II) – 分布式数据系统"></a>Design Data-intensive applications (II) – 分布式数据系统</h1>
-          <!--noindex-->
-          
-            <div class="post-button text-center">
-              <a class="btn" href="/blog/2021/06/29/DDIA-数据密集型应用笔记-II/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-         
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-      
-    
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
   <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/blog/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/blog/page/4/">4</a><a class="extend next" rel="next" href="/blog/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <span class="page-number current">1</span><a class="page-number" href="/blog/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/blog/page/5/">5</a><a class="extend next" rel="next" href="/blog/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -2118,7 +2004,7 @@ Windows Universal C Runtime -->
                 
                   <a href="/blog/archives">
                 
-                    <span class="site-state-item-count">40</span>
+                    <span class="site-state-item-count">41</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>

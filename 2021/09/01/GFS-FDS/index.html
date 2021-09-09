@@ -123,18 +123,18 @@
 
 
 
-  <meta name="description" content="GFS简介Why GFS?痛点  GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。  文件很大，GB级，传统操作系统里文件存取的最小单位block是4KB，处理TB数据集时，用数亿KB大小的小文件是不明智的。  处理大型数据集，对块的缓存没有意义">
+  <meta name="description" content="GFS FDS论文总结">
 <meta name="keywords" content="Data Storage">
 <meta property="og:type" content="article">
 <meta property="og:title" content="GFS &amp; FDS">
 <meta property="og:url" content="https://spycsh.github.io/blog/2021/09/01/GFS-FDS/index.html">
 <meta property="og:site_name" content="Spycsh">
-<meta property="og:description" content="GFS简介Why GFS?痛点  GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。  文件很大，GB级，传统操作系统里文件存取的最小单位block是4KB，处理TB数据集时，用数亿KB大小的小文件是不明智的。  处理大型数据集，对块的缓存没有意义">
+<meta property="og:description" content="GFS FDS论文总结">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2021-09-08T16:18:57.153Z">
+<meta property="og:updated_time" content="2021-09-09T05:51:45.761Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="GFS &amp; FDS">
-<meta name="twitter:description" content="GFS简介Why GFS?痛点  GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。  文件很大，GB级，传统操作系统里文件存取的最小单位block是4KB，处理TB数据集时，用数亿KB大小的小文件是不明智的。  处理大型数据集，对块的缓存没有意义">
+<meta name="twitter:description" content="GFS FDS论文总结">
 
 
 
@@ -427,7 +427,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2021-09-09 00:18:57" itemprop="dateModified" datetime="2021-09-09T00:18:57+08:00">2021-09-09</time>
+                <time title="修改时间：2021-09-09 13:51:45" itemprop="dateModified" datetime="2021-09-09T13:51:45+08:00">2021-09-09</time>
               
             
           </span>
@@ -460,7 +460,8 @@
       
 
       
-        <h1 id="GFS"><a href="#GFS" class="headerlink" title="GFS"></a>GFS</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>Why GFS?痛点</p>
+        <h1 id="GFS-FDS论文总结"><a href="#GFS-FDS论文总结" class="headerlink" title="GFS FDS论文总结"></a>GFS FDS论文总结</h1><a id="more"></a>
+<h1 id="GFS"><a href="#GFS" class="headerlink" title="GFS"></a>GFS</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>Why GFS?痛点</p>
 <ul>
 <li><p>GFS有多个clinet多个存储机器，应用程序bug、操作系统的bug、人为失误，甚至还有硬盘、内存、连接器、网络以及电源失效，这些都会导致组件失效，因此文件系统必须有持续的监控，冗余，自动恢复的机制。</p>
 </li>
@@ -504,7 +505,7 @@
 <ul>
 <li><p>Namespace management and locking<br>namespace会表示成一个lookup table，存储了全路径名对metadata的映射，<br>internal nodes（文件夹）上读锁（读时别人不能写，删，重命名），leaf nodes（文件）上读写锁（写时别人不能读写删改）。</p>
 </li>
-<li><p>Replica placement  </p>
+<li><p>Replica placement<br>replicas（3个)分散在不同机器和racks上。1st replica在本地rack上，2nd replica在本地rack但是在不同机器上，3rdreplica在不同rack上。</p>
 </li>
 <li>Creating, re-replicating and re-balancing replicas<br>新的副本加到disk使用率最低的chunkserver上，限制每个chunkserver上recent的replica creation数量</li>
 <li>garbage collection<br>文件删除会由master log，转为hidden file（回收站），3日后删除，metadata中消除</li>
@@ -551,6 +552,64 @@
 </tbody>
 </table>
 <h1 id="FDS"><a href="#FDS" class="headerlink" title="FDS"></a>FDS</h1><p>Flat Datacenter Storage (FDS): to “move the computation to data”, because remote access is slow due to oversubscription.</p>
+<p>其它的诸如hadoop，hdfs这一系列都基于一个假设，就是本地计算要比远程计算快很多，然而FDS认为，datacenter的网络足够快，将数据的粒度划分的尽可能的小，以尽可能利用远端多个机器的聚合带宽。这种小粒度的数据也会给任务的再调度提供了很大的优势。分布式计算影响严重的慢节点问题，会极大的浪费系统资源，整个任务都在等待这个最慢的子任务完成后才能完成，而只有整个任务完成后才能释放资源。而现在数据粒度很小，子任务也很小，即使某一个子任务很慢，一般也不会花太久的时间，另外对于细粒度的子任务可以立刻进行重新调度，代价也很小<a href="https://blog.csdn.net/lpstudy/article/details/84349980" target="_blank" rel="noopener">链接</a>。</p>
+<h2 id="架构-1"><a href="#架构-1" class="headerlink" title="架构"></a>架构</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># data存在 logical blobs中</span><br><span class="line"># 字节序列有128-bit GUID全局唯一ID</span><br><span class="line"># blob被分成很小单位tract</span><br><span class="line"># blob和tract都可分</span><br><span class="line">Blob | Tract0 | Tract1 | Tract2 ... Track n</span><br></pre></td></tr></table></figure>
+<h2 id="API-1"><a href="#API-1" class="headerlink" title="API"></a>API</h2><p>读写atomic，但是读写的执行不保证和它们issue的order一致，API是non-blocking的，因此多个请求能并行issue，FDS将会pipeline它们。</p>
+<p>每个disk被一个Tractserver的进程管理，tractserver接收网络传来的读写请求（ReadTract和WriteTract）。此外还有Metadata Server，拥有一个保存了所有active的tractserver的列表，分配给clients，这个list称为tract locator table(TLT), clinets 可以拿TLT一次，然后再不联系metadata server。</p>
+<h2 id="MetaData-TLT"><a href="#MetaData-TLT" class="headerlink" title="MetaData TLT"></a>MetaData TLT</h2><p>TLT对应一个表格，client使用blob的GUID(g)和tract number(i)去在TLT中选择一个entry（就是一行）。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># TLT 存储了负责每个tract的tractservers的地址</span><br><span class="line"># 根据以下公式，算出</span><br><span class="line">TractLocator = (Hash(g)+i) mod TLT length</span><br><span class="line"># 此公式意义在于不同blob的Tractlocator上的不同tract的locator不同，这个locator就对应了下表的某一行</span><br></pre></td></tr></table></figure>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Locator</th>
+<th style="text-align:center">Disk1(replica1)</th>
+<th style="text-align:center">Disk2</th>
+<th style="text-align:center">Disk3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">A</td>
+<td style="text-align:center">B</td>
+<td style="text-align:center">C</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">A</td>
+<td style="text-align:center">D</td>
+<td style="text-align:center">F</td>
+</tr>
+<tr>
+<td style="text-align:center">2</td>
+<td style="text-align:center">A</td>
+<td style="text-align:center">C</td>
+<td style="text-align:center">G</td>
+</tr>
+<tr>
+<td style="text-align:center">3</td>
+<td style="text-align:center">D</td>
+<td style="text-align:center">E</td>
+<td style="text-align:center">G</td>
+</tr>
+<tr>
+<td style="text-align:center">…</td>
+<td style="text-align:center">…</td>
+<td style="text-align:center">…</td>
+<td style="text-align:center">…</td>
+</tr>
+</tbody>
+</table>
+<p>只有当一个disk坏了，或者添加时，TLT才会改变。读写不改变TLT。读请求随机读一个replica，写请求先给primary，再同步到其它副本上。</p>
+<h2 id="容错-1"><a href="#容错-1" class="headerlink" title="容错"></a>容错</h2><p>replication提供了durability和availability，冗余redundant copies。</p>
+<p>Failure恢复过程：</p>
+<ul>
+<li>metadata server监测tractserver的心跳，timeout则认定tractserver 挂了</li>
+<li>每一行包含这个挂了的tractserver的那行version number 加一，代表这一行发生了更新，将挂掉的replica那一个格子删掉，改换成别的任意tractserver</li>
+<li>发送更新TLT任务到每一个被这个change影响的server</li>
+<li>等待每个tractserver回复新的TLT任务</li>
+<li>clients请求之前挂掉数据tract server那一个locator数据时，版本肯定就低于新版本，那么就会重新问metaserver新的TLT再cache</li>
+</ul>
 
       
     </div>
@@ -619,6 +678,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2021/09/09/NoSQL-Databases/" rel="prev" title="NoSQL Databases">
+                NoSQL Databases <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -690,7 +753,7 @@
                 
                   <a href="/blog/archives">
                 
-                    <span class="site-state-item-count">40</span>
+                    <span class="site-state-item-count">41</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
@@ -818,7 +881,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#GFS"><span class="nav-number">1.</span> <span class="nav-text">GFS</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#简介"><span class="nav-number">1.1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#文件"><span class="nav-number">1.2.</span> <span class="nav-text">文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#架构"><span class="nav-number">1.3.</span> <span class="nav-text">架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#处理过程"><span class="nav-number">1.4.</span> <span class="nav-text">处理过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#master高可用"><span class="nav-number">1.5.</span> <span class="nav-text">master高可用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#一致性模型"><span class="nav-number">1.6.</span> <span class="nav-text">一致性模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API"><span class="nav-number">1.7.</span> <span class="nav-text">API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Master操作"><span class="nav-number">1.8.</span> <span class="nav-text">Master操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容错"><span class="nav-number">1.9.</span> <span class="nav-text">容错</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GFS-与-HDFS"><span class="nav-number">1.10.</span> <span class="nav-text">GFS 与 HDFS</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#FDS"><span class="nav-number">2.</span> <span class="nav-text">FDS</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#GFS-FDS论文总结"><span class="nav-number">1.</span> <span class="nav-text">GFS FDS论文总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#GFS"><span class="nav-number">2.</span> <span class="nav-text">GFS</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#简介"><span class="nav-number">2.1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#文件"><span class="nav-number">2.2.</span> <span class="nav-text">文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#架构"><span class="nav-number">2.3.</span> <span class="nav-text">架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#处理过程"><span class="nav-number">2.4.</span> <span class="nav-text">处理过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#master高可用"><span class="nav-number">2.5.</span> <span class="nav-text">master高可用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#一致性模型"><span class="nav-number">2.6.</span> <span class="nav-text">一致性模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API"><span class="nav-number">2.7.</span> <span class="nav-text">API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Master操作"><span class="nav-number">2.8.</span> <span class="nav-text">Master操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容错"><span class="nav-number">2.9.</span> <span class="nav-text">容错</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GFS-与-HDFS"><span class="nav-number">2.10.</span> <span class="nav-text">GFS 与 HDFS</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#FDS"><span class="nav-number">3.</span> <span class="nav-text">FDS</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#架构-1"><span class="nav-number">3.1.</span> <span class="nav-text">架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API-1"><span class="nav-number">3.2.</span> <span class="nav-text">API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MetaData-TLT"><span class="nav-number">3.3.</span> <span class="nav-text">MetaData TLT</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容错-1"><span class="nav-number">3.4.</span> <span class="nav-text">容错</span></a></li></ol></li></ol></div>
             
 
           </div>
